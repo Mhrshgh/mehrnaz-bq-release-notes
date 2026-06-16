@@ -1,0 +1,504 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BigQuery Release Notes</title>
+  <meta name="description" content="Stay up to date with the latest BigQuery feature releases, fixes, deprecations, and breaking changes from Google Cloud." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-base:        #09090f;
+      --bg-surface:     #111118;
+      --bg-card:        #16161f;
+      --bg-card-hover:  #1c1c28;
+      --border:         rgba(255,255,255,0.07);
+      --border-focus:   rgba(100,160,255,0.5);
+      --accent-blue:    #4a8fff;
+      --accent-cyan:    #22d3ee;
+      --accent-purple:  #a78bfa;
+      --accent-green:   #34d399;
+      --accent-amber:   #fbbf24;
+      --accent-red:     #f87171;
+      --text-primary:   #f0f0f8;
+      --text-secondary: #8888aa;
+      --text-muted:     #55556a;
+      --glow-blue:      rgba(74,143,255,0.15);
+      --radius-card:    14px;
+      --radius-pill:    999px;
+      --transition:     0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% -10%, rgba(74,143,255,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 110%, rgba(167,139,250,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    header {
+      padding: 40px 0 32px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+    .header-brand { display: flex; align-items: center; gap: 14px; }
+    .bq-logo {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: linear-gradient(135deg, #1a73e8 0%, #4a8fff 50%, #22d3ee 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; color: #fff; flex-shrink: 0;
+      box-shadow: 0 0 24px rgba(74,143,255,0.3);
+    }
+    .header-text h1 {
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
+      font-weight: 700; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #f0f0f8 30%, #8888aa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header-text p { font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    #status-bar {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.78rem; color: var(--text-muted);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-pill); padding: 6px 14px;
+      transition: var(--transition);
+    }
+    #status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-muted); transition: var(--transition);
+    }
+    #status-dot.live    { background: var(--accent-green);  box-shadow: 0 0 6px var(--accent-green);  }
+    #status-dot.cached  { background: var(--accent-amber);  box-shadow: 0 0 6px var(--accent-amber);  }
+    #status-dot.error   { background: var(--accent-red);    box-shadow: 0 0 6px var(--accent-red);    }
+    #refresh-btn {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-pill); color: var(--text-secondary);
+      padding: 7px 16px; font-size: 0.83rem; font-family: inherit;
+      cursor: pointer; transition: var(--transition); white-space: nowrap;
+    }
+    #refresh-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: var(--glow-blue); }
+    #refresh-btn.loading .refresh-icon { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .refresh-icon { font-size: 14px; display: inline-block; transition: var(--transition); }
+    .search-wrap { position: relative; margin-bottom: 20px; }
+    .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; pointer-events: none; }
+    #search-input {
+      width: 100%; padding: 14px 16px 14px 46px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-card); color: var(--text-primary);
+      font-family: inherit; font-size: 0.95rem; transition: var(--transition); outline: none;
+    }
+    #search-input::placeholder { color: var(--text-muted); }
+    #search-input:focus { border-color: var(--border-focus); background: var(--bg-card); box-shadow: 0 0 0 3px rgba(100,160,255,0.08); }
+    #search-clear {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text-muted);
+      font-size: 18px; cursor: pointer; opacity: 0; transition: var(--transition); padding: 4px; line-height: 1;
+    }
+    #search-clear.visible { opacity: 1; }
+    #search-clear:hover { color: var(--text-primary); }
+    .filters-wrap { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; align-items: center; }
+    .filter-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; margin-right: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .filter-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: var(--radius-pill);
+      border: 1px solid var(--border); background: var(--bg-surface);
+      color: var(--text-secondary); font-size: 0.82rem; font-family: inherit;
+      font-weight: 500; cursor: pointer; transition: var(--transition); white-space: nowrap;
+    }
+    .filter-btn .count {
+      font-size: 0.72rem; padding: 1px 6px;
+      border-radius: var(--radius-pill); background: rgba(255,255,255,0.06);
+      color: var(--text-muted); transition: var(--transition);
+    }
+    .filter-btn:hover { border-color: rgba(255,255,255,0.15); color: var(--text-primary); }
+    .filter-btn.active { background: var(--glow-blue); border-color: var(--accent-blue); color: var(--accent-blue); }
+    .filter-btn.active .count { background: rgba(74,143,255,0.2); color: var(--accent-blue); }
+    .filter-btn[data-filter="feature"].active    { background: rgba(34,211,238,0.08);  border-color: var(--accent-cyan);   color: var(--accent-cyan);   }
+    .filter-btn[data-filter="fix"].active        { background: rgba(52,211,153,0.08);  border-color: var(--accent-green);  color: var(--accent-green);  }
+    .filter-btn[data-filter="preview"].active    { background: rgba(167,139,250,0.08); border-color: var(--accent-purple); color: var(--accent-purple); }
+    .filter-btn[data-filter="deprecation"].active{ background: rgba(251,191,36,0.08);  border-color: var(--accent-amber);  color: var(--accent-amber);  }
+    .filter-btn[data-filter="breaking"].active   { background: rgba(248,113,113,0.08); border-color: var(--accent-red);    color: var(--accent-red);    }
+    .stats-row { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px; }
+    .stats-row strong { color: var(--text-primary); font-weight: 600; }
+    #cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+    .skeleton-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 24px; animation: skeleton-pulse 1.6s ease-in-out infinite; }
+    .skeleton-line { background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 10px; }
+    @keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .release-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-card); padding: 22px 24px;
+      display: flex; flex-direction: column; gap: 14px;
+      transition: border-color var(--transition), background var(--transition), transform var(--transition), box-shadow var(--transition);
+      animation: card-in 0.4s ease both;
+    }
+    @keyframes card-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .release-card:hover { border-color: rgba(255,255,255,0.14); background: var(--bg-card-hover); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .card-date { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+    .date-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; font-size: 0.74rem; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.02em; white-space: nowrap; }
+    .category-badge { padding: 3px 10px; border-radius: var(--radius-pill); font-size: 0.71rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; white-space: nowrap; flex-shrink: 0; }
+    .cat-feature     { background: rgba(34,211,238,0.12);  color: var(--accent-cyan);   border: 1px solid rgba(34,211,238,0.2);  }
+    .cat-fix         { background: rgba(52,211,153,0.12);  color: var(--accent-green);  border: 1px solid rgba(52,211,153,0.2);  }
+    .cat-preview     { background: rgba(167,139,250,0.12); color: var(--accent-purple); border: 1px solid rgba(167,139,250,0.2); }
+    .cat-deprecation { background: rgba(251,191,36,0.12);  color: var(--accent-amber);  border: 1px solid rgba(251,191,36,0.2);  }
+    .cat-breaking    { background: rgba(248,113,113,0.12); color: var(--accent-red);    border: 1px solid rgba(248,113,113,0.2); }
+    .cat-other       { background: rgba(255,255,255,0.06); color: var(--text-secondary);border: 1px solid var(--border);         }
+    .card-title { font-size: 0.97rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; line-height: 1.45; }
+    .card-content { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.65; max-height: 120px; overflow: hidden; position: relative; transition: max-height 0.35s ease; }
+    .card-content.expanded { max-height: 9999px; }
+    .card-content::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--bg-card)); transition: opacity var(--transition); }
+    .card-content.expanded::after { opacity: 0; pointer-events: none; }
+    .release-card:hover .card-content::after { background: linear-gradient(transparent, var(--bg-card-hover)); }
+    .card-content h1,.card-content h2,.card-content h3,.card-content h4,.card-content h5 { color: var(--text-primary); font-size: 0.9rem; margin: 10px 0 4px; }
+    .card-content p { margin-bottom: 6px; }
+    .card-content a { color: var(--accent-blue); text-decoration: none; }
+    .card-content a:hover { text-decoration: underline; }
+    .card-content code { font-size: 0.8em; background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; color: var(--accent-cyan); font-family: monospace; }
+    .card-content ul,.card-content ol { padding-left: 18px; margin-bottom: 6px; }
+    .card-content li { margin-bottom: 2px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .expand-btn { background: none; border: none; color: var(--text-muted); font-size: 0.78rem; cursor: pointer; font-family: inherit; padding: 0; transition: var(--transition); display: flex; align-items: center; gap: 5px; }
+    .expand-btn:hover { color: var(--text-secondary); }
+    .expand-icon { font-size: 10px; transition: transform var(--transition); }
+    .expand-btn.expanded .expand-icon { transform: rotate(180deg); }
+    .docs-link { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 500; color: var(--accent-blue); text-decoration: none; padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid rgba(74,143,255,0.2); background: rgba(74,143,255,0.06); transition: var(--transition); }
+    .docs-link:hover { background: rgba(74,143,255,0.14); border-color: rgba(74,143,255,0.45); }
+    #empty-state { display: none; text-align: center; padding: 80px 24px; }
+    #empty-state .empty-icon { font-size: 52px; margin-bottom: 16px; opacity: 0.4; }
+    #empty-state h3 { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 8px; }
+    #empty-state p { font-size: 0.85rem; color: var(--text-muted); }
+    #error-banner { display: none; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); border-radius: var(--radius-card); padding: 18px 20px; color: var(--accent-red); font-size: 0.88rem; margin-bottom: 24px; align-items: center; gap: 12px; }
+    #error-banner.visible { display: flex; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+    @media (max-width: 640px) {
+      header { padding: 28px 0 24px; flex-direction: column; align-items: flex-start; }
+      #cards-grid { grid-template-columns: 1fr; }
+      .header-actions { width: 100%; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="header-brand">
+      <div class="bq-logo">BQ</div>
+      <div class="header-text">
+        <h1>BigQuery Release Notes</h1>
+        <p>Google Cloud &middot; Live updates from the official release feed</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div id="status-bar" role="status" aria-live="polite">
+        <span id="status-dot"></span>
+        <span id="status-text">Loading&hellip;</span>
+      </div>
+      <button id="refresh-btn" title="Refresh release notes" aria-label="Refresh release notes">
+        <span class="refresh-icon">&#8635;</span> Refresh
+      </button>
+    </div>
+  </header>
+
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input type="search" id="search-input" placeholder="Search release notes&hellip;" autocomplete="off" aria-label="Search release notes" />
+    <button id="search-clear" aria-label="Clear search">&#10005;</button>
+  </div>
+
+  <div class="filters-wrap" role="group" aria-label="Filter by category">
+    <span class="filter-label">Filter</span>
+    <button class="filter-btn active" data-filter="all">All <span class="count" id="count-all">0</span></button>
+    <button class="filter-btn" data-filter="feature">&#10022; Feature <span class="count" id="count-feature">0</span></button>
+    <button class="filter-btn" data-filter="fix">&#10004; Fix <span class="count" id="count-fix">0</span></button>
+    <button class="filter-btn" data-filter="preview">&#9672; Preview <span class="count" id="count-preview">0</span></button>
+    <button class="filter-btn" data-filter="deprecation">&#9888; Deprecation <span class="count" id="count-deprecation">0</span></button>
+    <button class="filter-btn" data-filter="breaking">&#9940; Breaking <span class="count" id="count-breaking">0</span></button>
+    <button class="filter-btn" data-filter="other">&middot; Other <span class="count" id="count-other">0</span></button>
+  </div>
+
+  <div id="error-banner" role="alert">
+    <span>&#9888;&#65039;</span>
+    <span id="error-text">Failed to load release notes.</span>
+  </div>
+
+  <div class="stats-row" aria-live="polite">
+    Showing <strong id="visible-count">0</strong> of <strong id="total-count">0</strong> releases
+  </div>
+
+  <main id="cards-grid" aria-label="Release notes cards">
+    <div class="skeleton-card" aria-hidden="true">
+      <div class="skeleton-line" style="height:12px;width:35%;margin-bottom:14px"></div>
+      <div class="skeleton-line" style="height:18px;width:80%"></div>
+      <div class="skeleton-line" style="height:10px;width:100%"></div>
+      <div class="skeleton-line" style="height:10px;width:90%"></div>
+    </div>
+    <div class="skeleton-card" aria-hidden="true">
+      <div class="skeleton-line" style="height:12px;width:30%;margin-bottom:14px"></div>
+      <div class="skeleton-line" style="height:18px;width:75%"></div>
+      <div class="skeleton-line" style="height:10px;width:100%"></div>
+      <div class="skeleton-line" style="height:10px;width:80%"></div>
+    </div>
+    <div class="skeleton-card" aria-hidden="true">
+      <div class="skeleton-line" style="height:12px;width:40%;margin-bottom:14px"></div>
+      <div class="skeleton-line" style="height:18px;width:70%"></div>
+      <div class="skeleton-line" style="height:10px;width:95%"></div>
+      <div class="skeleton-line" style="height:10px;width:60%"></div>
+    </div>
+  </main>
+
+  <div id="empty-state" role="status">
+    <div class="empty-icon">&#128269;</div>
+    <h3>No results found</h3>
+    <p>Try a different keyword or clear the active filters.</p>
+  </div>
+</div>
+
+<script>
+  var allReleases  = [];
+  var activeFilter = 'all';
+  var searchQuery  = '';
+
+  var grid         = document.getElementById('cards-grid');
+  var emptyState   = document.getElementById('empty-state');
+  var errorBanner  = document.getElementById('error-banner');
+  var errorText    = document.getElementById('error-text');
+  var searchInput  = document.getElementById('search-input');
+  var searchClear  = document.getElementById('search-clear');
+  var refreshBtn   = document.getElementById('refresh-btn');
+  var statusDot    = document.getElementById('status-dot');
+  var statusText   = document.getElementById('status-text');
+  var visibleCount = document.getElementById('visible-count');
+  var totalCount   = document.getElementById('total-count');
+
+  var CATEGORY_RULES = [
+    { key: 'breaking',    pattern: /breaking[\s-]change|removed\s+support|end[\s-]of[\s-]life/i },
+    { key: 'deprecation', pattern: /deprecat/i },
+    { key: 'preview',     pattern: /preview|alpha|beta|experimental/i },
+    { key: 'fix',         pattern: /bug[\s-]?fix|fixed|patch|hotfix|resolved/i },
+    { key: 'feature',     pattern: /feature|new\s|announc|launch|introduc|now\s+support|now\s+available/i },
+  ];
+
+  function detectCategory(entry) {
+    var text = ((entry.title || '') + ' ' + (entry.content || '')).toLowerCase();
+    for (var i = 0; i < CATEGORY_RULES.length; i++) {
+      if (CATEGORY_RULES[i].pattern.test(text)) return CATEGORY_RULES[i].key;
+    }
+    return 'other';
+  }
+
+  function formatDate(iso) {
+    if (!iso) return 'Unknown';
+    try {
+      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch(e) { return iso.slice(0, 10); }
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '';
+    var diff = (Date.now() - new Date(iso)) / 1000;
+    if (diff < 86400)  return 'Today';
+    if (diff < 172800) return 'Yesterday';
+    var days = Math.floor(diff / 86400);
+    if (days < 30) return days + 'd ago';
+    var months = Math.floor(days / 30);
+    if (months < 12) return months + 'mo ago';
+    return Math.floor(months/12) + 'y ago';
+  }
+
+  var CAT_LABELS = { feature:'Feature', fix:'Fix', preview:'Preview', deprecation:'Deprecation', breaking:'Breaking', other:'Update' };
+
+  function categoryBadge(cat) {
+    return '<span class="category-badge cat-' + cat + '">' + CAT_LABELS[cat] + '</span>';
+  }
+
+  function highlight(text, query) {
+    if (!query || !text) return text || '';
+    var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp('(' + escaped + ')', 'gi'),
+      '<mark style="background:rgba(251,191,36,0.3);color:inherit;border-radius:3px;padding:0 2px">$1</mark>');
+  }
+
+  function buildCard(entry, idx) {
+    var card = document.createElement('article');
+    card.className = 'release-card';
+    card.dataset.category = entry._category;
+    card.style.animationDelay = Math.min(idx, 20) * 30 + 'ms';
+
+    var cat     = entry._category;
+    var dateStr = formatDate(entry.updated);
+    var ago     = timeAgo(entry.updated);
+    var title   = highlight(entry.title || 'Untitled', searchQuery);
+    var hasLink = !!entry.link;
+    var agoHtml = ago ? '<span style="font-size:0.74rem;color:var(--text-muted)">' + ago + '</span>' : '';
+    var docsHtml = hasLink
+      ? '<a class="docs-link" href="' + entry.link + '" target="_blank" rel="noopener noreferrer">Docs &#8599;</a>'
+      : '';
+
+    card.innerHTML =
+      '<div class="card-header">' +
+        '<div class="card-date">' +
+          '<span class="date-badge" title="' + (entry.updated || '') + '">' + dateStr + '</span>' +
+          agoHtml +
+        '</div>' +
+        categoryBadge(cat) +
+      '</div>' +
+      '<div class="card-title">' + title + '</div>' +
+      '<div class="card-content" id="cc-' + idx + '">' +
+        (entry.content || '<em style="color:var(--text-muted)">No description available.</em>') +
+      '</div>' +
+      '<div class="card-footer">' +
+        '<button class="expand-btn" aria-expanded="false" aria-controls="cc-' + idx + '" data-idx="' + idx + '">' +
+          '<span>Read more</span><span class="expand-icon">&#9662;</span>' +
+        '</button>' +
+        docsHtml +
+      '</div>';
+
+    card.querySelector('.expand-btn').addEventListener('click', function() {
+      var i = this.dataset.idx;
+      var content = document.getElementById('cc-' + i);
+      var isExpanded = content.classList.toggle('expanded');
+      this.classList.toggle('expanded', isExpanded);
+      this.setAttribute('aria-expanded', String(isExpanded));
+      this.querySelector('span').textContent = isExpanded ? 'Show less' : 'Read more';
+    });
+
+    return card;
+  }
+
+  function updateCounts(releases) {
+    var counts = { all: releases.length, feature:0, fix:0, preview:0, deprecation:0, breaking:0, other:0 };
+    releases.forEach(function(r) { counts[r._category]++; });
+    Object.keys(counts).forEach(function(k) {
+      var el = document.getElementById('count-' + k);
+      if (el) el.textContent = counts[k];
+    });
+  }
+
+  function renderCards() {
+    var q = searchQuery.toLowerCase();
+    var filtered = allReleases.filter(function(r) {
+      var matchFilter = activeFilter === 'all' || r._category === activeFilter;
+      var matchSearch = !q || r._searchText.indexOf(q) !== -1;
+      return matchFilter && matchSearch;
+    });
+    grid.innerHTML = '';
+    if (filtered.length === 0) {
+      emptyState.style.display = 'block';
+      visibleCount.textContent = '0';
+    } else {
+      emptyState.style.display = 'none';
+      filtered.forEach(function(r, i) { grid.appendChild(buildCard(r, i)); });
+      visibleCount.textContent = filtered.length;
+    }
+    totalCount.textContent = allReleases.length;
+  }
+
+  document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      renderCards();
+    });
+  });
+
+  searchInput.addEventListener('input', function() {
+    searchQuery = searchInput.value.trim();
+    searchClear.classList.toggle('visible', searchQuery.length > 0);
+    renderCards();
+  });
+
+  searchClear.addEventListener('click', function() {
+    searchInput.value = '';
+    searchQuery = '';
+    searchClear.classList.remove('visible');
+    searchInput.focus();
+    renderCards();
+  });
+
+  function setStatus(state, text) {
+    statusDot.className = state;
+    statusText.textContent = text;
+  }
+
+  function fetchReleases(forceRefresh) {
+    refreshBtn.classList.add('loading');
+    setStatus('', 'Loading\u2026');
+    errorBanner.classList.remove('visible');
+
+    fetch('/api/releases' + (forceRefresh ? '?refresh=true' : ''))
+      .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+      .then(function(result) {
+        var data = result.data;
+        if (!result.ok || data.status === 'error') throw new Error(data.message || data.error || 'Unknown error');
+
+        allReleases = (data.releases || []).map(function(r) {
+          return Object.assign({}, r, {
+            _category:   detectCategory(r),
+            _searchText: ((r.title || '') + ' ' + (r.content || '')).toLowerCase()
+          });
+        });
+
+        var src = data.source === 'network' ? 'live' : 'cached';
+        var ts  = data.last_updated
+          ? new Date(data.last_updated * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+          : '';
+        setStatus(src, (src === 'live' ? 'Live' : 'Cached') + (ts ? ' \u00b7 ' + ts : ''));
+
+        updateCounts(allReleases);
+        renderCards();
+
+        if (data.status === 'warning') {
+          errorText.textContent = 'Fetch failed \u2014 showing cached data. (' + data.error + ')';
+          errorBanner.classList.add('visible');
+        }
+      })
+      .catch(function(err) {
+        console.error(err);
+        setStatus('error', 'Error');
+        errorText.textContent = 'Failed to load release notes: ' + err.message;
+        errorBanner.classList.add('visible');
+        grid.innerHTML = '';
+        emptyState.style.display = 'none';
+        totalCount.textContent = '0';
+        visibleCount.textContent = '0';
+      })
+      .finally(function() { refreshBtn.classList.remove('loading'); });
+  }
+
+  refreshBtn.addEventListener('click', function() { fetchReleases(true); });
+  fetchReleases(false);
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ───────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# ── Environment variables ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Flask ──────────────────────────────────────────────────────
+instance/
+.webassets-cache
+
+# ── Testing ────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+*.coverage
+
+# ── Type checking ──────────────────────────────────────────────
+.mypy_cache/
+.pyright/
+
+# ── IDEs & editors ────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ── OS artifacts ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
