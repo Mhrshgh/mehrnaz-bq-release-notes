@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -192,6 +192,18 @@
     .expand-btn.expanded .expand-icon { transform: rotate(180deg); }
     .docs-link { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 500; color: var(--accent-blue); text-decoration: none; padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid rgba(74,143,255,0.2); background: rgba(74,143,255,0.06); transition: var(--transition); }
     .docs-link:hover { background: rgba(74,143,255,0.14); border-color: rgba(74,143,255,0.45); }
+    /* ── Copy button ─────────────────────────────────────────── */
+    .copy-btn { background: none; border: none; color: var(--text-muted); font-size: 0.78rem; cursor: pointer; font-family: inherit; padding: 0; transition: var(--transition); display: flex; align-items: center; gap: 5px; }
+    .copy-btn:hover { color: var(--accent-cyan); }
+    .copy-btn.copied { color: var(--accent-green); }
+    .card-footer-left { display: flex; align-items: center; gap: 12px; }
+    /* ── Export CSV button ───────────────────────────────────── */
+    #export-btn { display: flex; align-items: center; gap: 7px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--text-secondary); padding: 5px 14px; font-size: 0.8rem; font-family: inherit; font-weight: 500; cursor: pointer; transition: var(--transition); white-space: nowrap; margin-left: auto; }
+    #export-btn:hover { border-color: var(--accent-green); color: var(--accent-green); background: rgba(52,211,153,0.07); }
+    #export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* ── Toast notification ──────────────────────────────────── */
+    #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 10px 20px; font-size: 0.83rem; color: var(--text-primary); box-shadow: 0 8px 32px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; z-index: 999; white-space: nowrap; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     #empty-state { display: none; text-align: center; padding: 80px 24px; }
     #empty-state .empty-icon { font-size: 52px; margin-bottom: 16px; opacity: 0.4; }
     #empty-state h3 { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 8px; }
@@ -254,6 +266,9 @@
 
   <div class="stats-row" aria-live="polite">
     Showing <strong id="visible-count">0</strong> of <strong id="total-count">0</strong> releases
+    <button id="export-btn" title="Export visible releases to CSV" aria-label="Export to CSV" disabled>
+      &#8595; Export CSV
+    </button>
   </div>
 
   <main id="cards-grid" aria-label="Release notes cards">
@@ -284,6 +299,9 @@
   </div>
 </div>
 
+<!-- Toast -->
+<div id="toast" role="status" aria-live="polite"></div>
+
 <script>
   var allReleases  = [];
   var activeFilter = 'all';
@@ -300,6 +318,24 @@
   var statusText   = document.getElementById('status-text');
   var visibleCount = document.getElementById('visible-count');
   var totalCount   = document.getElementById('total-count');
+  var exportBtn    = document.getElementById('export-btn');
+  var toast        = document.getElementById('toast');
+  var toastTimer   = null;
+
+  /* ── Toast helper ─────────────────────────────────────────── */
+  function showToast(msg, icon) {
+    toast.textContent = (icon || '') + (icon ? '  ' : '') + msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 2200);
+  }
+
+  /* ── Strip HTML tags ──────────────────────────────────────── */
+  function stripHtml(html) {
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html || '';
+    return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+  }
 
   var CATEGORY_RULES = [
     { key: 'breaking',    pattern: /breaking[\s-]change|removed\s+support|end[\s-]of[\s-]life/i },
@@ -378,9 +414,14 @@
         (entry.content || '<em style="color:var(--text-muted)">No description available.</em>') +
       '</div>' +
       '<div class="card-footer">' +
-        '<button class="expand-btn" aria-expanded="false" aria-controls="cc-' + idx + '" data-idx="' + idx + '">' +
-          '<span>Read more</span><span class="expand-icon">&#9662;</span>' +
-        '</button>' +
+        '<div class="card-footer-left">' +
+          '<button class="expand-btn" aria-expanded="false" aria-controls="cc-' + idx + '" data-idx="' + idx + '">' +
+            '<span>Read more</span><span class="expand-icon">&#9662;</span>' +
+          '</button>' +
+          '<button class="copy-btn" data-idx="' + idx + '" aria-label="Copy to clipboard" title="Copy to clipboard">' +
+            '&#128203; Copy' +
+          '</button>' +
+        '</div>' +
         docsHtml +
       '</div>';
 
@@ -391,6 +432,31 @@
       this.classList.toggle('expanded', isExpanded);
       this.setAttribute('aria-expanded', String(isExpanded));
       this.querySelector('span').textContent = isExpanded ? 'Show less' : 'Read more';
+    });
+
+    card.querySelector('.copy-btn').addEventListener('click', function() {
+      var btn = this;
+      var plainContent = stripHtml(entry.content);
+      var text = [
+        entry.title || 'Untitled',
+        'Date: ' + formatDate(entry.updated),
+        'Category: ' + (CAT_LABELS[entry._category] || 'Update'),
+        entry.link ? 'Link: ' + entry.link : '',
+        '',
+        plainContent
+      ].filter(Boolean).join('\n');
+
+      navigator.clipboard.writeText(text).then(function() {
+        btn.classList.add('copied');
+        btn.innerHTML = '&#10003; Copied!';
+        showToast('Copied to clipboard', '&#128203;');
+        setTimeout(function() {
+          btn.classList.remove('copied');
+          btn.innerHTML = '&#128203; Copy';
+        }, 2000);
+      }).catch(function() {
+        showToast('Copy failed — try manually', '&#9888;');
+      });
     });
 
     return card;
@@ -416,12 +482,15 @@
     if (filtered.length === 0) {
       emptyState.style.display = 'block';
       visibleCount.textContent = '0';
+      exportBtn.disabled = true;
     } else {
       emptyState.style.display = 'none';
       filtered.forEach(function(r, i) { grid.appendChild(buildCard(r, i)); });
       visibleCount.textContent = filtered.length;
+      exportBtn.disabled = false;
     }
     totalCount.textContent = allReleases.length;
+    exportBtn._filtered = filtered;
   }
 
   document.querySelectorAll('.filter-btn').forEach(function(btn) {
@@ -498,6 +567,41 @@
   }
 
   refreshBtn.addEventListener('click', function() { fetchReleases(true); });
+
+  /* ── Export CSV ───────────────────────────────────────────── */
+  exportBtn.addEventListener('click', function() {
+    var rows = exportBtn._filtered || [];
+    if (!rows.length) return;
+
+    function csvCell(val) {
+      var s = String(val || '').replace(/"/g, '""');
+      return '"' + s + '"';
+    }
+
+    var lines = ['Title,Date,Category,Link,Summary'];
+    rows.forEach(function(r) {
+      lines.push([
+        csvCell(r.title),
+        csvCell(formatDate(r.updated)),
+        csvCell(CAT_LABELS[r._category] || 'Update'),
+        csvCell(r.link),
+        csvCell(stripHtml(r.content).slice(0, 300))
+      ].join(','));
+    });
+
+    var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    var date = new Date().toISOString().slice(0, 10);
+    a.href     = url;
+    a.download = 'bq-release-notes-' + date + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Exported ' + rows.length + ' releases as CSV', '&#8595;');
+  });
+
   fetchReleases(false);
 </script>
 </body>
